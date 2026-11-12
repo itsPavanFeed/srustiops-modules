@@ -31,7 +31,6 @@ inputs:
     pattern: ^[0-9]+(\.[0-9]+){0,2}$
   - name: family
     type: string
-    required: true
     description: Parameter group family, e.g. postgres17.
     pattern: ^[a-z]+[0-9.]+$
   - name: major_engine_version
@@ -62,7 +61,7 @@ inputs:
   - name: username
     type: string
     description: Master username.
-    default: pravaha_admin
+    default: srustiops_admin
     pattern: ^[a-zA-Z][a-zA-Z0-9_]{0,15}$
   - name: multi_az
     type: bool
@@ -70,7 +69,6 @@ inputs:
     default: true
   - name: subnet_ids
     type: list(string)
-    required: true
     description: Private subnets for the DB subnet group.
     item_pattern: ^subnet-[0-9a-f]{8,17}$
     max_items: 16
@@ -80,6 +78,9 @@ inputs:
     description: Security groups.
     item_pattern: ^sg-[0-9a-f]{8,17}$
     max_items: 5
+  - name: kms_key_id
+    type: string
+    description: KMS key for storage encryption, usually a reference to a KMSKey output.
   - name: backup_retention_period
     type: number
     description: Days of automated backups.
@@ -105,3 +106,46 @@ outputs:
   - db_instance_arn
   - db_instance_identifier
   - db_instance_master_user_secret_arn
+# Adopting an existing database keeps its own subnet, parameter and option
+# groups (referenced by name) and its security settings as they are; parts of
+# the baseline it lacks are recorded as baseline gaps.
+adopt:
+  resource: aws_db_instance
+  match:
+    aws: ["rds:db"]
+  properties:
+    aws: {type: "AWS::RDS::DBInstance", id: "{{id_tail}}"}
+  inputs:
+    identifier: "{{prop:DBInstanceIdentifier}}"
+    engine: "{{prop:Engine}}"
+    engine_version: "{{prop:EngineVersion}}"
+    instance_class: "{{prop:DBInstanceClass}}"
+    allocated_storage: "{{prop:AllocatedStorage}}"
+    max_allocated_storage: "{{prop:MaxAllocatedStorage}}"
+    db_name: "{{prop:DBName}}"
+    username: "{{prop:MasterUsername}}"
+    multi_az: "{{prop:MultiAZ}}"
+    vpc_security_group_ids: "{{prop:VPCSecurityGroups}}"
+    kms_key_id: "{{prop:KmsKeyId}}"
+    backup_retention_period: "{{prop:BackupRetentionPeriod}}"
+    tags: "{{tags}}"
+  gaps:
+    create_db_subnet_group: false
+    db_subnet_group_name: "{{prop:DBSubnetGroupName}}"
+    create_db_parameter_group: false
+    parameter_group_name: "{{prop:DBParameterGroupName}}"
+    create_db_option_group: false
+    option_group_name: "{{prop:OptionGroupName}}"
+    deletion_protection: "{{prop:DeletionProtection}}"
+    storage_encrypted: "{{prop:StorageEncrypted}}"
+    publicly_accessible: "{{prop:PubliclyAccessible}}"
+    copy_tags_to_snapshot: "{{prop:CopyTagsToSnapshot}}"
+    auto_minor_version_upgrade: "{{prop:AutoMinorVersionUpgrade}}"
+    iam_database_authentication_enabled: "{{prop:EnableIAMDatabaseAuthentication}}"
+    performance_insights_enabled: "{{prop:EnablePerformanceInsights}}"
+    manage_master_user_password: "{{prop:ManageMasterUserPassword}}"
+  dependencies:
+    - {path: VPCSecurityGroups, kind: SecurityGroup, output: id, input: vpc_security_group_ids}
+    - {path: KmsKeyId, kind: KMSKey, output: key_arn, input: kms_key_id}
+  imports:
+    - {to: "module.db_instance.aws_db_instance.this[0]", id: "{{id_tail}}"}

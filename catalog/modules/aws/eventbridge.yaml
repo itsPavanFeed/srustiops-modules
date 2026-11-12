@@ -1,0 +1,36 @@
+# Kind EventBridgeBus: contracts use `kind: EventBridgeBus`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: EventBridgeBus
+id: aws-eventbridge
+title: AWS EventBridge bus and rules
+description: EventBridge event bus (or the default bus) with rules and their targets.
+source: terraform-aws-modules/eventbridge/aws
+versions:
+  - 4.3.3
+providers:
+  - hashicorp/aws
+inputs:
+  - name: bus_name
+    type: string
+    default: default
+    pattern: ^[a-zA-Z0-9._-]{1,256}$
+  - name: create_bus
+    type: bool
+    default: false
+    description: Create a custom bus (false uses the account's default bus).
+  - name: rules
+    type: json
+    description: Map of rules (event_pattern or schedule_expression).
+  - name: targets
+    type: json
+    description: Map of rule name -> list of targets (arn, usually a reference).
+  - name: create_role
+    type: bool
+    default: false
+  - name: tags
+    type: map(string)
+    description: Tags.
+outputs:
+  - eventbridge_bus_name
+  - eventbridge_bus_arn
+  - eventbridge_rule_ids

@@ -56,3 +56,20 @@ outputs:
   - names
   - urls
   - names_list
+# Adopting an existing bucket: one bucket name, no prefix; labels come from
+# the live bucket (the module adds a "name" label, which the zero-diff gate
+# reports if the live bucket lacks it).
+adopt:
+  resource: google_storage_bucket
+  match:
+    gcp: ["storage.googleapis.com/Bucket"]
+  inputs:
+    project_id: "{{project}}"
+    names: "{{name}}"
+    location: "{{region}}"
+    labels: "{{tags}}"
+  imports:
+    - {to: 'google_storage_bucket.buckets["{{name}}"]', id: "{{project}}/{{name}}"}
+  attributes:
+    labels: {resource: 'google_storage_bucket.buckets["{{name}}"]', path: labels}
+    storage_class: {resource: 'google_storage_bucket.buckets["{{name}}"]', path: storage_class}

@@ -1,12 +1,12 @@
-# cloud-pravaha-modules
+# srustiops-modules
 
-The approved catalog of **kinds** for Cloud Pravaha, and each tenant's **defaults**. This repository holds **no HCL and no custom modules**. Every kind wraps one public OpenTofu registry module pinned to exact versions, with the inputs teams may set, the kind's defaults, and the security baseline it must run with.
+The approved catalog of **kinds** for SrustiOps, and each tenant's **defaults**. Every kind teams use wraps one public OpenTofu registry module pinned to exact versions, with the inputs teams may set, the kind's defaults, and the security baseline it must run with. The only HCL here is the platform's own **first-party modules** (`catalog/first-party/`), which the provisioner uses to build workspaces; tenants cannot use them.
 
-Cloud Pravaha builds this repository into versioned **module releases** (Tenant settings → Releases): it validates the kinds and the tenant's defaults, vendors every module from the registry pinned to a commit, and pins nested modules to approved versions. Runs use only the deployed release.
+SrustiOps builds this repository into versioned **module releases** (Tenant settings → Releases): it validates the kinds and the tenant's defaults, vendors every module from the registry pinned to a commit, and pins nested modules to approved versions. Runs use only the deployed release.
 
-The catalog is the only thing that decides what Cloud Pravaha can run:
+The catalog is the only thing that decides what SrustiOps can run:
 - The control plane rejects any stack that uses something outside it.
-- Runners that pin this directory (`PRAVAHA_CATALOG_DIR`) also re-check every downloaded module and provider against it.
+- Runners that pin this directory (`SRUSTIOPS_CATALOG_DIR`) also re-check every downloaded module and provider against it.
 
 ## Layout: segregated by provider
 
@@ -26,7 +26,7 @@ tenants/
   <tenant>/defaults/<Kind>.yaml   that tenant's defaults (only that tenant's release includes them)
 ```
 
-The loader enforces these rules, and `pravaha catalog verify` and CI fail on any violation:
+The loader enforces these rules, and `srustiops catalog verify` and CI fail on any violation:
 
 - **The folder decides the cloud.** A module in `modules/aws/` is an AWS module and can only be used in `aws` environments. Files must not set `cloud` themselves.
 - **No cross-cloud providers.** A module may use only providers from its own cloud's file plus `common.yaml`. For example, an AWS module can never pull in `hashicorp/google`, and a `common` module can use no cloud provider at all.
@@ -73,7 +73,7 @@ Input types: `string`, `number`, `bool`, `list(string)`, `list(number)`, `map(st
 `tenants/<tenant>/defaults/<Kind>.yaml` sets a tenant's defaults for one kind, optionally per environment tier. Values pass the same checks as contract values and can never touch the enforced baseline:
 
 ```yaml
-apiVersion: pravaha/v1
+apiVersion: srustiops/v1
 kind: Defaults
 target: S3Bucket
 version: 5.17.0        # optional: the version contracts get unless they pin one
@@ -108,20 +108,32 @@ Inputs resolve as kind default → tenant default → tenant tier default → co
 | common | AzureNaming | Azure/naming/azurerm | 0.4.4 | none: only creates random strings, needs no cloud (used by e2e) |
 | common | Label | cloudposse/label/null | 0.25.0 | none: creates no resources |
 
+## First-party modules (the provisioner's)
+
+Marked `platform: true`: only the provisioner's platform workspace can use them. CI validates each with `tofu validate`; `srustiops-test-resources/blueprint-tests` applies the GCP and Azure ones in sandbox accounts.
+
+| Cloud | Modules | Used by blueprint |
+| --- | --- | --- |
+| aws | `srustiops-landing` (KMS, state bucket, RDS, endpoints, IRSA or instance-profile identities), `srustiops-eks-install`, `srustiops-vm`, and helpers (`subnet`, `route-table`, `internet-gateway`, `network-acl`, `elastic-ip`) | `aws-account-vm`, `aws-account-kubernetes`, `aws-existing-kubernetes` |
+| gcp | `srustiops-network` (VPC, pod and service ranges, Cloud NAT, private services), `srustiops-gke`, `srustiops-landing` (KMS, CMEK bucket, Cloud SQL, Workload Identity accounts), `srustiops-gke-install` | `gcp-project-kubernetes` |
+| azure | `srustiops-network` (resource group, VNet, subnets, private DNS), `srustiops-aks` (CNI overlay, OIDC issuer, Workload ID), `srustiops-landing` (Blob, PostgreSQL flexible server, Key Vault, Workload ID identities), `srustiops-aks-install` | `azure-subscription-kubernetes` |
+
+Landing modules hold a workspace's data: their resources have `prevent_destroy`, and the provisioner never destroys them.
+
 ## Changing the catalog
 
 1. Add or update the kind in its cloud's folder (`common/` if it needs no cloud credentials). Pin exact versions only. Add any new provider to that cloud's `providers/<cloud>.yaml`.
 2. Check that every `inputs`, `enforced` and `outputs` name exists in that module version.
 3. Run the verifier from the backend repository:
    ```bash
-   cd ../cloud-pravaha-backend && go run ./cmd/pravaha catalog verify -dir ../cloud-pravaha-modules/catalog -online
+   cd ../srustiops-backend && go run ./cmd/srustiops catalog verify -dir ../srustiops-modules/catalog -online
    ```
    It validates the structure and segregation rules, and confirms each pinned module, dependency and provider version exists on registry.opentofu.org.
-   Then add or extend a fixture stack in `cloud-pravaha-test-resources/stacks/` and run the registry test. It renders every fixture, downloads the real modules and providers, runs the runner's dependency check and `tofu validate`:
+   Then add or extend a fixture stack in `srustiops-test-resources/stacks/` and run the registry test. It renders every fixture, downloads the real modules and providers, runs the runner's dependency check and `tofu validate`:
    ```bash
-   PRAVAHA_TOFU_INTEGRATION=1 go test ./internal/spec -run Registry -v -timeout 20m
+   SRUSTIOPS_TOFU_INTEGRATION=1 go test ./internal/spec -run Registry -v -timeout 20m
    ```
 4. Open a pull request. Catalog changes widen what can run in production, so the folder's code owners must approve.
-5. After merging, build a module release in Cloud Pravaha (Tenant settings → Releases → Build now) and deploy it. The build vendors and checks everything again; nothing changes for running stacks until a release is deployed.
+5. After merging, build a module release in SrustiOps (Tenant settings → Releases → Build now) and deploy it. The build vendors and checks everything again; nothing changes for running stacks until a release is deployed.
 
 When upgrading a module, add the new version next to the old one first, so existing stacks keep validating. Remove the old version once stacks have moved.

@@ -1,0 +1,74 @@
+# Kind SrustiOpsAKSInstall: SrustiOps tenant on AKS (Helm).
+# Used by the provisioner's blueprints.
+kind: SrustiOpsAKSInstall
+id: azure-srustiops-aks-install
+title: SrustiOps tenant on AKS (Helm)
+description: Installs the srustiops-tenant chart with a one-time install token, so bootstrap makes every key in the cluster; the database URL comes from Key Vault, Blob Storage through Workload ID.
+platform: true
+source: first-party/azure/srustiops-aks-install
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/azurerm
+  - hashicorp/kubernetes
+  - hashicorp/helm
+inputs:
+  - name: tenant
+    type: string
+    required: true
+  - name: cluster_name
+    type: string
+    required: true
+  - name: resource_group
+    type: string
+    required: true
+  - name: database_host
+    type: string
+    required: true
+  - name: key_vault_id
+    type: string
+    required: true
+  - name: storage_account
+    type: string
+    required: true
+  - name: tenant_client_id
+    type: string
+    required: true
+  - name: runner_client_id
+    type: string
+    required: true
+  - name: namespace
+    type: string
+  - name: release
+    type: string
+  - name: chart_repository
+    type: string
+    description: "OCI registry holding the srustiops-tenant chart."
+  - name: chart_version
+    type: string
+    required: true
+  - name: image_repo
+    type: string
+  - name: image_tag
+    type: string
+    required: true
+  - name: gateway_url
+    type: string
+    required: true
+  - name: central_url
+    type: string
+    required: true
+  - name: gateway_ca
+    type: string
+  - name: install_token
+    type: string
+    required: true
+    description: One-time install token (works once, expires in an hour); the provisioner sets it.
+    one_time_token: true
+  - name: replicas
+    type: number
+    min: 1
+    max: 5
+outputs:
+  - release
+  - namespace

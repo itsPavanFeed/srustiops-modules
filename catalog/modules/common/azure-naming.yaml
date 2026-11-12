@@ -36,3 +36,13 @@ outputs:
   - key_vault
   - virtual_network
   - unique-seed
+# Adopting existing random strings (used to demonstrate and test the
+# zero-diff gate without a cloud account).
+adopt:
+  resource: random_string
+  match:
+    common: ["random_string"]
+  imports:
+    - {to: "random_string.main", id: "{{id}}"}
+  attributes:
+    unique-include-numbers: {resource: "random_string.main", path: numeric}

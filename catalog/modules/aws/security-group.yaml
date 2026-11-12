@@ -18,7 +18,7 @@ inputs:
   - name: description
     type: string
     description: Security group description.
-    pattern: ^[A-Za-z0-9 ._-]{0,200}$
+    pattern: ^[A-Za-z0-9 ._:/()#,@\[\]+=&;{}!$*-]{0,255}$
   - name: vpc_id
     type: string
     required: true
@@ -37,3 +37,25 @@ outputs:
   - id
   - arn
   - name
+# Adopting an existing security group manages the group itself, with its
+# exact name, in the VPC it belongs to (a reference to the VPC's stack when
+# SrustiOps manages it). Rules that already exist stay as they are in AWS:
+# importing them would tag them, which the zero-diff gate forbids; rules
+# added to the contract later are managed.
+adopt:
+  resource: aws_security_group
+  match:
+    aws: ["ec2:security-group"]
+  properties:
+    aws: {type: "AWS::EC2::SecurityGroup", id: "{{id_tail}}"}
+  inputs:
+    name: "{{prop:GroupName}}"
+    description: "{{prop:GroupDescription}}"
+    vpc_id: "{{prop:VpcId}}"
+    tags: "{{tags}}"
+  gaps:
+    use_name_prefix: false
+  dependencies:
+    - {path: VpcId, kind: VPC, output: vpc_id, input: vpc_id}
+  imports:
+    - {to: "aws_security_group.this[0]", id: "{{id_tail}}"}

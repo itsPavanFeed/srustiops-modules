@@ -1,0 +1,77 @@
+# Kind SrustiOpsVM: the SrustiOps services on one EC2 instance (Docker Compose).
+kind: SrustiOpsVM
+id: aws-srustiops-vm
+title: SrustiOps tenant on a VM (AWS)
+description: One private EC2 instance (no inbound rules; Session Manager) running the tenant plane, link agent and a runner in Docker Compose, bootstrapped once with an install token. The database is the landing module's RDS.
+platform: true
+source: first-party/aws/srustiops-vm
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    required: true
+    pattern: ^[a-z][a-z0-9-]{2,30}$
+  - name: tenant
+    type: string
+    required: true
+  - name: vpc_id
+    type: string
+    required: true
+  - name: vpc_cidr
+    type: string
+    required: true
+  - name: subnet_ids
+    type: list(string)
+    required: true
+  - name: instance_profile
+    type: string
+    required: true
+  - name: kms_key_arn
+    type: string
+    required: true
+  - name: database_endpoint
+    type: string
+    required: true
+  - name: database_password_secret_arn
+    type: string
+    required: true
+  - name: gateway_url
+    type: string
+    required: true
+  - name: central_url
+    type: string
+    required: true
+  - name: gateway_ca
+    type: string
+  - name: install_token
+    type: string
+    required: true
+    description: One-time install token (works once, expires in an hour); the provisioner sets it.
+    one_time_token: true
+  - name: remove_srustiops
+    type: bool
+    default: false
+    description: Take SrustiOps off the instance (its workspace was removed); the instance, disk and keys stay.
+  - name: image_repo
+    type: string
+  - name: image_tag
+    type: string
+    required: true
+  - name: instance_type
+    type: string
+    pattern: ^[a-z][a-z0-9]*\.[a-z0-9]+$
+  - name: architecture
+    type: string
+    allowed: [x86_64, arm64]
+  - name: disk_gb
+    type: number
+    min: 20
+    max: 500
+  - name: tags
+    type: map(string)
+outputs:
+  - instance_id
+  - private_ip

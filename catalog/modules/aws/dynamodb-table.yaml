@@ -1,0 +1,94 @@
+# Kind DynamoDBTable: contracts use `kind: DynamoDBTable`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: DynamoDBTable
+id: aws-dynamodb-table
+title: AWS DynamoDB table
+description: DynamoDB table with server-side encryption, point-in-time recovery and deletion protection.
+source: terraform-aws-modules/dynamodb-table/aws
+versions:
+  - 5.5.2
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    required: true
+    description: Table name.
+    pattern: ^[a-zA-Z0-9_.-]{3,255}$
+  - name: hash_key
+    type: string
+    required: true
+    description: Partition key attribute.
+  - name: range_key
+    type: string
+    description: Sort key attribute.
+  - name: attributes
+    type: json
+    required: true
+    description: 'Key attributes, e.g. [{name: id, type: S}].'
+  - name: billing_mode
+    type: string
+    default: PAY_PER_REQUEST
+    allowed: [PAY_PER_REQUEST, PROVISIONED]
+  - name: read_capacity
+    type: number
+    min: 1
+    max: 40000
+  - name: write_capacity
+    type: number
+    min: 1
+    max: 40000
+  - name: ttl_enabled
+    type: bool
+    default: false
+  - name: ttl_attribute_name
+    type: string
+  - name: stream_enabled
+    type: bool
+    default: false
+  - name: stream_view_type
+    type: string
+    allowed: [KEYS_ONLY, NEW_IMAGE, OLD_IMAGE, NEW_AND_OLD_IMAGES]
+  - name: global_secondary_indexes
+    type: json
+    description: Global secondary indexes.
+  - name: server_side_encryption_kms_key_arn
+    type: string
+    description: Customer KMS key ARN, usually a reference to a KMSKey output.
+    pattern: ^arn:aws[a-z-]*:kms:[a-z0-9-]+:\d{12}:key/[0-9a-f-]+$
+  - name: tags
+    type: map(string)
+    description: Tags.
+enforced:
+  server_side_encryption_enabled: true
+  point_in_time_recovery_enabled: true
+  deletion_protection_enabled: true
+outputs:
+  - dynamodb_table_arn
+  - dynamodb_table_id
+  - dynamodb_table_stream_arn
+adopt:
+  resource: aws_dynamodb_table
+  match:
+    aws: ["dynamodb:table"]
+  properties:
+    aws: {type: "AWS::DynamoDB::Table", id: "{{id_tail}}"}
+  inputs:
+    name: "{{prop:TableName}}"
+    hash_key: "{{propfind:KeySchema:KeyType=HASH:AttributeName}}"
+    range_key: "{{propfind:KeySchema:KeyType=RANGE:AttributeName}}"
+    attributes: "{{propmap:AttributeDefinitions:name=AttributeName,type=AttributeType}}"
+    billing_mode: "{{prop:BillingMode}}"
+    read_capacity: "{{prop:ProvisionedThroughput.ReadCapacityUnits}}"
+    write_capacity: "{{prop:ProvisionedThroughput.WriteCapacityUnits}}"
+    stream_enabled: "{{prop:StreamSpecification.StreamEnabled}}"
+    stream_view_type: "{{prop:StreamSpecification.StreamViewType}}"
+    tags: "{{tags}}"
+  gaps:
+    server_side_encryption_enabled: "{{prop:SSESpecification.SSEEnabled}}"
+    point_in_time_recovery_enabled: "{{prop:PointInTimeRecoverySpecification.PointInTimeRecoveryEnabled}}"
+    deletion_protection_enabled: "{{prop:DeletionProtectionEnabled}}"
+  dependencies:
+    - {path: SSESpecification.KMSMasterKeyId, kind: KMSKey, output: key_arn, input: server_side_encryption_kms_key_arn}
+  imports:
+    - {to: "aws_dynamodb_table.this[0]", id: "{{id_tail}}"}

@@ -1,0 +1,51 @@
+# Kind SNSTopic: contracts use `kind: SNSTopic`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: SNSTopic
+id: aws-sns
+title: AWS SNS topic
+description: SNS topic, encrypted with a KMS key when one is given.
+source: terraform-aws-modules/sns/aws
+versions:
+  - 7.2.0
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    required: true
+    description: Topic name (FIFO topics end in .fifo).
+    pattern: ^[a-zA-Z0-9_-]{1,251}(\.fifo)?$
+  - name: display_name
+    type: string
+  - name: fifo_topic
+    type: bool
+    default: false
+  - name: kms_master_key_id
+    type: string
+    description: KMS key, usually a reference to a KMSKey output.
+  - name: tags
+    type: map(string)
+    description: Tags.
+outputs:
+  - topic_arn
+  - topic_name
+adopt:
+  resource: aws_sns_topic
+  match:
+    aws: ["sns:topic"]
+  properties:
+    aws: {type: "AWS::SNS::Topic", id: "{{id}}"}
+  inputs:
+    name: "{{prop:TopicName}}"
+    display_name: "{{prop:DisplayName}}"
+    fifo_topic: "{{prop:FifoTopic}}"
+    kms_master_key_id: "{{prop:KmsMasterKeyId}}"
+    tags: "{{tags}}"
+  # The topic's policy and subscriptions stay as they are in AWS.
+  gaps:
+    create_topic_policy: false
+    create_subscription: false
+  dependencies:
+    - {path: KmsMasterKeyId, kind: KMSKey, output: key_arn, input: kms_master_key_id}
+  imports:
+    - {to: "aws_sns_topic.this[0]", id: "{{id}}"}

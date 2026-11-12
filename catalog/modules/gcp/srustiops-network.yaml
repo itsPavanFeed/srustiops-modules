@@ -1,0 +1,35 @@
+# Kind SrustiOpsGCPNetwork: SrustiOps workspace network (GCP).
+# Used by the provisioner's blueprints.
+kind: SrustiOpsGCPNetwork
+id: gcp-srustiops-network
+title: SrustiOps workspace network (GCP)
+description: VPC, a subnet with pod and service ranges, Cloud NAT, Private Google Access and the private services range Cloud SQL uses; enables the APIs a workspace needs.
+platform: true
+source: first-party/gcp/srustiops-network
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/google
+inputs:
+  - name: project
+    type: string
+    required: true
+  - name: region
+    type: string
+    required: true
+  - name: name
+    type: string
+    required: true
+  - name: cidr
+    type: string
+    description: "A /16: nodes get the first /20, services the second, pods the upper /17"
+  - name: labels
+    type: map(string)
+outputs:
+  - network
+  - network_id
+  - subnetwork
+  - subnet_cidr
+  - pods_range
+  - services_range
+  - private_services

@@ -1,0 +1,44 @@
+# Kind InternetGateway: contracts use `kind: InternetGateway`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: InternetGateway
+id: aws-internet-gateway
+title: AWS internet gateway
+description: One internet gateway attached to a VPC (first-party module).
+source: first-party/aws/internet-gateway
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    description: Name tag.
+    pattern: ^[a-zA-Z0-9 ._-]{1,255}$
+  - name: vpc_id
+    type: string
+    required: true
+    description: Usually a reference to a VPC output.
+  - name: tags
+    type: map(string)
+    description: Tags.
+outputs:
+  - id
+  - arn
+adopt:
+  resource: aws_internet_gateway
+  match:
+    aws: ["ec2:internet-gateway"]
+  # The VPC it is attached to comes from its attachment.
+  properties:
+    aws:
+      type: "AWS::EC2::InternetGateway"
+      id: "{{id_tail}}"
+      related: {type: "AWS::EC2::VPCGatewayAttachment", key: InternetGatewayId, as: Attachment}
+  inputs:
+    name: "{{propfind:Tags:Key=Name:Value}}"
+    vpc_id: "{{prop:Attachment.VpcId}}"
+    tags: "{{tags}}"
+  dependencies:
+    - {path: Attachment.VpcId, kind: VPC, output: vpc_id, input: vpc_id}
+  imports:
+    - {to: "aws_internet_gateway.this", id: "{{id_tail}}"}

@@ -1,0 +1,48 @@
+# Kind SrustiOpsGCPLanding: SrustiOps tenant landing (GCP).
+# Used by the provisioner's blueprints.
+kind: SrustiOpsGCPLanding
+id: gcp-srustiops-landing
+title: SrustiOps tenant landing (GCP)
+description: Cloud KMS key, the CMEK state bucket, Cloud SQL for PostgreSQL on a private IP (password in Secret Manager), and the Workload Identity service accounts of the tenant plane and runners. Data resources are protected from destroy.
+platform: true
+source: first-party/gcp/srustiops-landing
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/google
+  - hashicorp/random
+inputs:
+  - name: project
+    type: string
+    required: true
+  - name: region
+    type: string
+    required: true
+  - name: name
+    type: string
+    required: true
+  - name: network_id
+    type: string
+    required: true
+    description: "The VPC (self link or id) Cloud SQL gets its private IP in"
+  - name: private_services
+    type: string
+    required: true
+    description: "The network's private services connection; Cloud SQL waits for it"
+  - name: db_tier
+    type: string
+  - name: db_high_availability
+    type: bool
+  - name: namespace
+    type: string
+  - name: release
+    type: string
+  - name: labels
+    type: map(string)
+outputs:
+  - tenant_service_account
+  - runner_service_account
+  - bucket
+  - kms_key
+  - database_ip
+  - database_password_secret

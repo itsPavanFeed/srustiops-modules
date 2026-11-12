@@ -31,3 +31,19 @@ enforced:
 outputs:
   - key_arn
   - key_id
+# Adopting an existing key keeps its own key policy and rotation setting
+# (baseline gaps from the live key); its aliases stay as they are.
+adopt:
+  resource: aws_kms_key
+  match:
+    aws: ["kms:key"]
+  properties:
+    aws: {type: "AWS::KMS::Key", id: "{{id_tail}}"}
+  inputs:
+    description: "{{prop:Description}}"
+    tags: "{{tags}}"
+  gaps:
+    policy: "{{propjson:KeyPolicy}}"
+    enable_key_rotation: "{{prop:EnableKeyRotation}}"
+  imports:
+    - {to: "aws_kms_key.this[0]", id: "{{id_tail}}"}

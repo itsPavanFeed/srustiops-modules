@@ -1,0 +1,49 @@
+# Kind ElastiCacheReplicationGroup: contracts use `kind: ElastiCacheReplicationGroup`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: ElastiCacheReplicationGroup
+id: aws-elasticache
+title: AWS ElastiCache replication group
+description: Redis or Valkey replication group in private subnets, encrypted in transit and at rest.
+source: terraform-aws-modules/elasticache/aws
+versions:
+  - 1.11.2
+providers:
+  - hashicorp/aws
+inputs:
+  - name: replication_group_id
+    type: string
+    required: true
+    pattern: ^[a-z][a-z0-9-]{0,39}$
+  - name: engine
+    type: string
+    default: redis
+    allowed: [redis, valkey]
+  - name: engine_version
+    type: string
+  - name: node_type
+    type: string
+    default: cache.t3.micro
+    pattern: ^cache\.[a-z0-9]+\.[a-z0-9]+$
+  - name: subnet_ids
+    type: list(string)
+    required: true
+  - name: vpc_id
+    type: string
+    description: Usually a reference to a VPC output.
+  - name: security_group_ids
+    type: list(string)
+    description: Usually references to SecurityGroup outputs.
+  - name: kms_key_arn
+    type: string
+    description: Usually a reference to a KMSKey output.
+  - name: tags
+    type: map(string)
+    description: Tags.
+enforced:
+  create_replication_group: true
+  create_security_group: false
+  transit_encryption_enabled: true
+  at_rest_encryption_enabled: true
+outputs:
+  - replication_group_arn
+  - replication_group_primary_endpoint_address

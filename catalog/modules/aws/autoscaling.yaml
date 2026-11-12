@@ -1,0 +1,56 @@
+# Kind AutoScalingGroup: contracts use `kind: AutoScalingGroup`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: AutoScalingGroup
+id: aws-autoscaling
+title: AWS Auto Scaling group
+description: Auto Scaling group with its own launch template across the given subnets.
+source: terraform-aws-modules/autoscaling/aws
+versions:
+  - 9.3.2
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    required: true
+    pattern: ^[a-zA-Z0-9_.-]{1,128}$
+  - name: min_size
+    type: number
+    default: 0
+    min: 0
+    max: 100
+  - name: max_size
+    type: number
+    default: 1
+    min: 0
+    max: 100
+  - name: desired_capacity
+    type: number
+    min: 0
+    max: 100
+  - name: vpc_zone_identifier
+    type: list(string)
+    required: true
+    description: Subnets.
+  - name: image_id
+    type: string
+    required: true
+    pattern: ^ami-[0-9a-f]{8,17}$
+  - name: instance_type
+    type: string
+    default: t3.micro
+  - name: security_groups
+    type: list(string)
+    description: Usually references to SecurityGroup outputs.
+  - name: health_check_type
+    type: string
+    allowed: [EC2, ELB]
+  - name: tags
+    type: map(string)
+    description: Tags.
+enforced:
+  create_launch_template: true
+outputs:
+  - autoscaling_group_name
+  - autoscaling_group_arn
+  - launch_template_id

@@ -1,0 +1,42 @@
+# Kind SrustiOpsAKSCluster: SrustiOps workspace cluster (AKS).
+# Used by the provisioner's blueprints.
+kind: SrustiOpsAKSCluster
+id: azure-srustiops-aks
+title: SrustiOps workspace cluster (AKS)
+description: AKS with Azure CNI overlay, Azure network policy, the OIDC issuer and Workload ID, and one autoscaling node pool.
+platform: true
+source: first-party/azure/srustiops-aks
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/azurerm
+inputs:
+  - name: location
+    type: string
+    required: true
+  - name: name
+    type: string
+    required: true
+  - name: resource_group
+    type: string
+    required: true
+  - name: subnet_id
+    type: string
+    required: true
+  - name: kubernetes_version
+    type: string
+  - name: vm_size
+    type: string
+  - name: nodes_min
+    type: number
+  - name: nodes_max
+    type: number
+  - name: api_authorized_cidrs
+    type: list(string)
+    description: "Who may reach the API server (the provisioner's runners need it to install the chart); empty means anyone"
+  - name: tags
+    type: map(string)
+outputs:
+  - cluster_name
+  - cluster_id
+  - oidc_issuer_url

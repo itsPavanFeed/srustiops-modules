@@ -1,0 +1,82 @@
+# Kind EC2Instance: contracts use `kind: EC2Instance`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: EC2Instance
+id: aws-ec2-instance
+title: AWS EC2 instance
+description: EC2 instance in a subnet with its security groups; IMDSv2 and encrypted root volume by the module's defaults.
+source: terraform-aws-modules/ec2-instance/aws
+versions:
+  - 6.4.1
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    required: true
+    description: Name tag.
+    pattern: ^[a-zA-Z0-9 ._-]{1,128}$
+  - name: ami
+    type: string
+    description: AMI ID (otherwise the latest Amazon Linux).
+    pattern: ^ami-[0-9a-f]{8,17}$
+  - name: instance_type
+    type: string
+    default: t3.micro
+    pattern: ^[a-z][a-z0-9-]*\.[a-z0-9]+$
+  - name: subnet_id
+    type: string
+    description: Subnet ID.
+    pattern: ^subnet-[0-9a-f]{8,17}$
+  - name: vpc_security_group_ids
+    type: list(string)
+    description: Security groups, usually references to SecurityGroup outputs.
+    max_items: 5
+  - name: key_name
+    type: string
+  - name: iam_instance_profile
+    type: string
+    description: Instance profile name, usually a reference to an IAMRole output.
+  - name: monitoring
+    type: bool
+  - name: ebs_optimized
+    type: bool
+  - name: disable_api_termination
+    type: bool
+  - name: associate_public_ip_address
+    type: bool
+  - name: tags
+    type: map(string)
+    description: Tags.
+enforced:
+  create_security_group: false
+outputs:
+  - id
+  - arn
+  - private_ip
+  - public_ip
+  - availability_zone
+adopt:
+  resource: aws_instance
+  match:
+    aws: ["ec2:instance"]
+  properties:
+    aws: {type: "AWS::EC2::Instance", id: "{{id_tail}}"}
+  inputs:
+    name: "{{propfind:Tags:Key=Name:Value}}"
+    ami: "{{prop:ImageId}}"
+    instance_type: "{{prop:InstanceType}}"
+    subnet_id: "{{prop:SubnetId}}"
+    vpc_security_group_ids: "{{prop:SecurityGroupIds}}"
+    key_name: "{{prop:KeyName}}"
+    iam_instance_profile: "{{prop:IamInstanceProfile}}"
+    monitoring: "{{prop:Monitoring}}"
+    ebs_optimized: "{{prop:EbsOptimized}}"
+    disable_api_termination: "{{prop:DisableApiTermination}}"
+    tags: "{{tags}}"
+  # Volume tags stay as they are on the instance's volumes.
+  gaps:
+    enable_volume_tags: false
+  dependencies:
+    - {path: SecurityGroupIds, kind: SecurityGroup, output: id, input: vpc_security_group_ids}
+  imports:
+    - {to: "aws_instance.this[0]", id: "{{id_tail}}"}

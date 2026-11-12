@@ -42,3 +42,93 @@ outputs:
   - s3_bucket_id
   - s3_bucket_arn
   - s3_bucket_region
+# Adopting an existing bucket imports every resource the module manages for
+# it, so the plan after import must show zero changes (the zero-diff gate).
+# Optional imports may not exist on a live bucket; when the plan finds
+# nothing there, the import is dropped and `absent` becomes a baseline gap
+# of the adopted contract (module arguments that stop the module from
+# creating the missing part), so the code matches the bucket as it exists.
+adopt:
+  resource: aws_s3_bucket
+  match:
+    aws: ["s3:bucket"]
+  properties:
+    aws: {type: "AWS::S3::Bucket", id: "{{name}}"}
+  inputs:
+    bucket: "{{name}}"
+    tags: "{{tags}}"
+  # Encryption as the bucket has it, from the start; a customer-managed KMS
+  # key is referenced from the key's stack (adopted first when needed).
+  gaps:
+    server_side_encryption_configuration:
+      rule:
+        bucket_key_enabled: "{{prop:BucketEncryption.ServerSideEncryptionConfiguration.0.BucketKeyEnabled}}"
+        apply_server_side_encryption_by_default:
+          sse_algorithm: "{{prop:BucketEncryption.ServerSideEncryptionConfiguration.0.ServerSideEncryptionByDefault.SSEAlgorithm}}"
+          kms_master_key_id: "{{prop:BucketEncryption.ServerSideEncryptionConfiguration.0.ServerSideEncryptionByDefault.KMSMasterKeyID}}"
+  dependencies:
+    - path: BucketEncryption.ServerSideEncryptionConfiguration.0.ServerSideEncryptionByDefault.KMSMasterKeyID
+      kind: KMSKey
+      output: key_arn
+      gap: server_side_encryption_configuration.rule.apply_server_side_encryption_by_default.kms_master_key_id
+  imports:
+    - {to: "aws_s3_bucket.this[0]", id: "{{name}}"}
+    - to: "aws_s3_bucket_versioning.this[0]"
+      id: "{{name}}"
+      optional: true
+      absent: {versioning: {}}
+    # Every bucket has default encryption (since January 2023).
+    - {to: "aws_s3_bucket_server_side_encryption_configuration.this[0]", id: "{{name}}"}
+    - to: "aws_s3_bucket_public_access_block.this[0]"
+      id: "{{name}}"
+      optional: true
+      absent: {attach_public_policy: false}
+    - to: "aws_s3_bucket_ownership_controls.this[0]"
+      id: "{{name}}"
+      optional: true
+      absent: {control_object_ownership: false}
+    - to: "aws_s3_bucket_policy.this[0]"
+      id: "{{name}}"
+      optional: true
+      absent: {attach_deny_insecure_transport_policy: false, attach_require_latest_tls_policy: false}
+  # Live settings that differ from the baseline become baseline gaps, so the
+  # adopted contract matches the bucket exactly (zero diff).
+  live:
+    # Never versioned: S3 reports "Disabled", which the module cannot set;
+    # the bucket is adopted without managing versioning.
+    - resource: "aws_s3_bucket_versioning.this[0]"
+      when: {versioning_configuration.0.status: Disabled}
+      drop_import: true
+      gaps: {versioning: {}}
+    - resource: "aws_s3_bucket_versioning.this[0]"
+      when: {versioning_configuration.0.status: Suspended}
+      gaps: {versioning: {status: Suspended}}
+    # Drift: versioning was turned on for a bucket adopted without it. The
+    # baseline (versioning on) applies again and the configuration is adopted.
+    - resource: "aws_s3_bucket.this[0]"
+      when: {versioning.0.enabled: true}
+      clear_gaps: [versioning]
+      add_import: {to: "aws_s3_bucket_versioning.this[0]", id: "{{input:bucket}}"}
+    # Encryption as configured on the bucket (e.g. SSE-S3/AES256).
+    - resource: "aws_s3_bucket_server_side_encryption_configuration.this[0]"
+      gaps:
+        server_side_encryption_configuration:
+          rule:
+            bucket_key_enabled: "{{live:rule.0.bucket_key_enabled}}"
+            blocked_encryption_types: "{{live:rule.0.blocked_encryption_types}}"
+            apply_server_side_encryption_by_default:
+              sse_algorithm: "{{live:rule.0.apply_server_side_encryption_by_default.0.sse_algorithm}}"
+              kms_master_key_id: "{{live:rule.0.apply_server_side_encryption_by_default.0.kms_master_key_id}}"
+    # Public access block flags as set on the bucket.
+    - resource: "aws_s3_bucket_public_access_block.this[0]"
+      gaps:
+        block_public_acls: "{{live:block_public_acls}}"
+        block_public_policy: "{{live:block_public_policy}}"
+        ignore_public_acls: "{{live:ignore_public_acls}}"
+        restrict_public_buckets: "{{live:restrict_public_buckets}}"
+    - resource: "aws_s3_bucket_ownership_controls.this[0]"
+      gaps:
+        object_ownership: "{{live:rule.0.object_ownership}}"
+  attributes:
+    tags: {resource: "aws_s3_bucket.this[0]", path: tags}
+    force_destroy: {resource: "aws_s3_bucket.this[0]", path: force_destroy}

@@ -1,0 +1,55 @@
+# Kind Subnet: contracts use `kind: Subnet`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: Subnet
+id: aws-subnet
+title: AWS subnet
+description: One subnet in a VPC (first-party module). Its routing is managed by RouteTable resources, never implicitly.
+source: first-party/aws/subnet
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    description: Name tag.
+    pattern: ^[a-zA-Z0-9 ._-]{1,255}$
+  - name: vpc_id
+    type: string
+    required: true
+    description: Usually a reference to a VPC output.
+  - name: cidr_block
+    type: string
+    required: true
+    pattern: ^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$
+  - name: availability_zone
+    type: string
+    pattern: ^[a-z]{2}-[a-z]+-\d[a-z]$
+  - name: map_public_ip_on_launch
+    type: bool
+    default: false
+  - name: tags
+    type: map(string)
+    description: Tags.
+outputs:
+  - id
+  - arn
+  - cidr_block
+  - availability_zone
+adopt:
+  resource: aws_subnet
+  match:
+    aws: ["ec2:subnet"]
+  properties:
+    aws: {type: "AWS::EC2::Subnet", id: "{{id_tail}}"}
+  inputs:
+    name: "{{propfind:Tags:Key=Name:Value}}"
+    vpc_id: "{{prop:VpcId}}"
+    cidr_block: "{{prop:CidrBlock}}"
+    availability_zone: "{{prop:AvailabilityZone}}"
+    map_public_ip_on_launch: "{{prop:MapPublicIpOnLaunch}}"
+    tags: "{{tags}}"
+  dependencies:
+    - {path: VpcId, kind: VPC, output: vpc_id, input: vpc_id}
+  imports:
+    - {to: "aws_subnet.this", id: "{{id_tail}}"}

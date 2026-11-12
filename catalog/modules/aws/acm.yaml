@@ -1,0 +1,32 @@
+# Kind ACMCertificate: contracts use `kind: ACMCertificate`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: ACMCertificate
+id: aws-acm
+title: AWS ACM certificate
+description: Public TLS certificate validated through DNS in a Route 53 zone.
+source: terraform-aws-modules/acm/aws
+versions:
+  - 6.3.1
+providers:
+  - hashicorp/aws
+inputs:
+  - name: domain_name
+    type: string
+    required: true
+    pattern: ^(\*\.)?([a-z0-9-]+\.)+[a-z]{2,}$
+  - name: subject_alternative_names
+    type: list(string)
+    max_items: 100
+  - name: zone_id
+    type: string
+    required: true
+    description: Route 53 zone for the validation records, usually a reference to a Route53Zone output.
+  - name: tags
+    type: map(string)
+    description: Tags.
+enforced:
+  validation_method: DNS
+  wait_for_validation: true
+outputs:
+  - acm_certificate_arn
+  - acm_certificate_status

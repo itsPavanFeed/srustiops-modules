@@ -1,0 +1,51 @@
+# Kind SrustiOpsLanding: what a SrustiOps tenant keeps in its own AWS account.
+# Used by the provisioner; its resources hold the tenant's data and are never destroyed.
+kind: SrustiOpsLanding
+id: aws-srustiops-landing
+title: SrustiOps tenant landing (AWS)
+description: KMS key, state bucket, PostgreSQL (RDS, managed password), VPC endpoints, and the tenant's identities (IRSA roles on EKS or an instance profile on a VM). Data resources are protected from destroy.
+platform: true
+source: first-party/aws/srustiops-landing
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    required: true
+    pattern: ^[a-z][a-z0-9-]{2,30}$
+  - name: vpc_id
+    type: string
+    required: true
+  - name: vpc_cidr
+    type: string
+    required: true
+  - name: private_subnet_ids
+    type: list(string)
+    required: true
+  - name: eks_oidc_provider_arn
+    type: string
+    description: Empty for a VM install.
+  - name: eks_oidc_issuer
+    type: string
+  - name: deploy_role_arns
+    type: list(string)
+  - name: bucket_admin_arns
+    type: list(string)
+    description: Roles that may use the state bucket from outside the VPC, besides the role that deploys it
+  - name: db_instance_class
+    type: string
+    pattern: ^db\.[a-z0-9]+\.[a-z0-9]+$
+  - name: db_multi_az
+    type: bool
+  - name: tags
+    type: map(string)
+outputs:
+  - tenant_role_arn
+  - runner_role_arn
+  - instance_profile
+  - bucket
+  - kms_key_arn
+  - database_endpoint
+  - database_password_secret_arn

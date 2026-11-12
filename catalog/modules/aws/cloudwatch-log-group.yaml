@@ -1,0 +1,49 @@
+# Kind CloudWatchLogGroup: contracts use `kind: CloudWatchLogGroup`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: CloudWatchLogGroup
+id: aws-cloudwatch-log-group
+title: AWS CloudWatch log group
+description: CloudWatch Logs log group with a retention period, encrypted with a KMS key when one is given.
+source: terraform-aws-modules/cloudwatch/aws//modules/log-group
+versions:
+  - 5.7.3
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    required: true
+    description: Log group name, e.g. /aws/lambda/orders.
+    pattern: ^[a-zA-Z0-9_./#-]{1,512}$
+  - name: retention_in_days
+    type: number
+    default: 30
+    allowed: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653]
+  - name: kms_key_id
+    type: string
+    description: KMS key ARN, usually a reference to a KMSKey output.
+  - name: log_group_class
+    type: string
+    allowed: [STANDARD, INFREQUENT_ACCESS]
+  - name: tags
+    type: map(string)
+    description: Tags.
+outputs:
+  - cloudwatch_log_group_name
+  - cloudwatch_log_group_arn
+adopt:
+  resource: aws_cloudwatch_log_group
+  match:
+    aws: ["logs:log-group"]
+  properties:
+    aws: {type: "AWS::Logs::LogGroup", id: "{{arn_path:log-group:}}"}
+  inputs:
+    name: "{{prop:LogGroupName}}"
+    retention_in_days: "{{prop:RetentionInDays}}"
+    kms_key_id: "{{prop:KmsKeyId}}"
+    log_group_class: "{{prop:LogGroupClass}}"
+    tags: "{{tags}}"
+  dependencies:
+    - {path: KmsKeyId, kind: KMSKey, output: key_arn, input: kms_key_id}
+  imports:
+    - {to: "aws_cloudwatch_log_group.this[0]", id: "{{arn_path:log-group:}}"}

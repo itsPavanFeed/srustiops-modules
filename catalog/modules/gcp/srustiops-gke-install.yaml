@@ -1,0 +1,77 @@
+# Kind SrustiOpsGKEInstall: SrustiOps tenant on GKE (Helm).
+# Used by the provisioner's blueprints.
+kind: SrustiOpsGKEInstall
+id: gcp-srustiops-gke-install
+title: SrustiOps tenant on GKE (Helm)
+description: Installs the srustiops-tenant chart with a one-time install token, so bootstrap makes every key in the cluster; the database URL comes from Secret Manager, the bucket through Workload Identity.
+platform: true
+source: first-party/gcp/srustiops-gke-install
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/google
+  - hashicorp/kubernetes
+  - hashicorp/helm
+inputs:
+  - name: tenant
+    type: string
+    required: true
+  - name: project
+    type: string
+    required: true
+  - name: cluster_name
+    type: string
+    required: true
+  - name: location
+    type: string
+    required: true
+  - name: namespace
+    type: string
+  - name: release
+    type: string
+  - name: chart_repository
+    type: string
+    description: "OCI registry holding the srustiops-tenant chart."
+  - name: chart_version
+    type: string
+    required: true
+  - name: image_repo
+    type: string
+  - name: image_tag
+    type: string
+    required: true
+  - name: gateway_url
+    type: string
+    required: true
+  - name: central_url
+    type: string
+    required: true
+  - name: gateway_ca
+    type: string
+  - name: install_token
+    type: string
+    required: true
+    description: One-time install token (works once, expires in an hour); the provisioner sets it.
+    one_time_token: true
+  - name: database_ip
+    type: string
+    required: true
+  - name: database_password_secret
+    type: string
+    required: true
+  - name: bucket
+    type: string
+    required: true
+  - name: tenant_service_account
+    type: string
+    required: true
+  - name: runner_service_account
+    type: string
+    required: true
+  - name: replicas
+    type: number
+    min: 1
+    max: 5
+outputs:
+  - release
+  - namespace

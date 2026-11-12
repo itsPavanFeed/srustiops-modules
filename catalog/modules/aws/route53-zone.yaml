@@ -1,0 +1,45 @@
+# Kind Route53Zone: contracts use `kind: Route53Zone`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: Route53Zone
+id: aws-route53-zone
+title: AWS Route 53 hosted zone
+description: Public or private hosted zone; records are managed separately.
+source: terraform-aws-modules/route53/aws
+versions:
+  - 6.5.1
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    required: true
+    description: Zone name, e.g. example.com.
+    pattern: ^([a-z0-9-]+\.)+[a-z]{2,}\.?$
+  - name: comment
+    type: string
+  - name: private_zone
+    type: bool
+    default: false
+  - name: vpc_id
+    type: string
+    description: VPC of a private zone, usually a reference to a VPC output.
+  - name: tags
+    type: map(string)
+    description: Tags.
+outputs:
+  - id
+  - arn
+  - name
+  - name_servers
+adopt:
+  resource: aws_route53_zone
+  match:
+    aws: ["route53:hostedzone"]
+  properties:
+    aws: {type: "AWS::Route53::HostedZone", id: "{{id_tail}}"}
+  inputs:
+    name: "{{prop:Name}}"
+    comment: "{{prop:HostedZoneConfig.Comment}}"
+    tags: "{{tags}}"
+  imports:
+    - {to: "aws_route53_zone.this[0]", id: "{{id_tail}}"}

@@ -1,0 +1,50 @@
+# Kind ApplicationLoadBalancer: contracts use `kind: ApplicationLoadBalancer`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: ApplicationLoadBalancer
+id: aws-alb
+title: AWS application load balancer
+description: Application load balancer in public or private subnets with listeners and target groups; deletion protection and invalid-header dropping on.
+source: terraform-aws-modules/alb/aws
+versions:
+  - 10.5.1
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    required: true
+    pattern: ^[a-zA-Z0-9-]{1,32}$
+  - name: vpc_id
+    type: string
+    required: true
+    description: Usually a reference to a VPC output.
+  - name: subnets
+    type: list(string)
+    required: true
+    description: At least two subnets in different zones.
+  - name: security_groups
+    type: list(string)
+    required: true
+    description: Usually references to SecurityGroup outputs.
+  - name: internal
+    type: bool
+    default: false
+  - name: listeners
+    type: json
+    description: Map of listeners (port, protocol, certificate_arn, forward/redirect).
+  - name: target_groups
+    type: json
+    description: Map of target groups.
+  - name: tags
+    type: map(string)
+    description: Tags.
+enforced:
+  load_balancer_type: application
+  create_security_group: false
+  enable_deletion_protection: true
+  drop_invalid_header_fields: true
+outputs:
+  - arn
+  - dns_name
+  - zone_id
+  - target_groups

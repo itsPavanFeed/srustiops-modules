@@ -1,0 +1,67 @@
+# Kind IAMRole: contracts use `kind: IAMRole`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: IAMRole
+id: aws-iam-role
+title: AWS IAM role
+description: IAM role with a trust policy and attached managed policies (no static credentials).
+source: terraform-aws-modules/iam/aws//modules/iam-role
+versions:
+  - 6.8.2
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    required: true
+    description: Role name.
+    pattern: ^[a-zA-Z0-9+=,.@_-]{1,64}$
+  - name: path
+    type: string
+    pattern: ^/([a-zA-Z0-9+=,.@_-]+/)*$
+  - name: description
+    type: string
+  - name: max_session_duration
+    type: number
+    min: 3600
+    max: 43200
+  - name: permissions_boundary
+    type: string
+    description: Permissions boundary policy ARN.
+  - name: source_trust_policy_documents
+    type: list(string)
+    description: Trust policy documents (JSON).
+  - name: policies
+    type: map(string)
+    description: Managed policies to attach, name -> ARN.
+  - name: create_instance_profile
+    type: bool
+    default: false
+  - name: tags
+    type: map(string)
+    description: Tags.
+outputs:
+  - name
+  - arn
+  - unique_id
+  - instance_profile_arn
+  - instance_profile_name
+adopt:
+  resource: aws_iam_role
+  match:
+    aws: ["iam:role"]
+  properties:
+    aws: {type: "AWS::IAM::Role", id: "{{id_tail}}"}
+  inputs:
+    name: "{{prop:RoleName}}"
+    path: "{{prop:Path}}"
+    description: "{{prop:Description}}"
+    max_session_duration: "{{prop:MaxSessionDuration}}"
+    permissions_boundary: "{{prop:PermissionsBoundary}}"
+    tags: "{{tags}}"
+  # The trust policy as the role has it; attached and inline policies stay
+  # as they are in AWS.
+  gaps:
+    use_name_prefix: false
+    source_trust_policy_documents: ["{{propjson:AssumeRolePolicyDocument}}"]
+  imports:
+    - {to: "aws_iam_role.this[0]", id: "{{id_tail}}"}

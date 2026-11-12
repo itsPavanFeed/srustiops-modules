@@ -1,0 +1,79 @@
+# Kind SQSQueue: contracts use `kind: SQSQueue`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: SQSQueue
+id: aws-sqs
+title: AWS SQS queue
+description: Encrypted SQS queue (SQS-managed or a customer KMS key), optionally with a dead-letter queue reference.
+source: terraform-aws-modules/sqs/aws
+versions:
+  - 5.2.2
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    required: true
+    description: Queue name (FIFO queues end in .fifo).
+    pattern: ^[a-zA-Z0-9_-]{1,75}(\.fifo)?$
+  - name: fifo_queue
+    type: bool
+    default: false
+  - name: visibility_timeout_seconds
+    type: number
+    min: 0
+    max: 43200
+  - name: message_retention_seconds
+    type: number
+    min: 60
+    max: 1209600
+  - name: delay_seconds
+    type: number
+    min: 0
+    max: 900
+  - name: receive_wait_time_seconds
+    type: number
+    min: 0
+    max: 20
+  - name: max_message_size
+    type: number
+    min: 1024
+    max: 1048576
+  - name: kms_master_key_id
+    type: string
+    description: Customer KMS key, usually a reference to a KMSKey output.
+  - name: redrive_policy
+    type: json
+    description: '{deadLetterTargetArn, maxReceiveCount}; the target is usually a reference to another SQSQueue.'
+  - name: tags
+    type: map(string)
+    description: Tags.
+enforced:
+  sqs_managed_sse_enabled: true
+outputs:
+  - queue_arn
+  - queue_url
+  - queue_name
+adopt:
+  resource: aws_sqs_queue
+  match:
+    aws: ["sqs:queue"]
+  properties:
+    aws: {type: "AWS::SQS::Queue", id: "https://sqs.{{region}}.amazonaws.com/{{account}}/{{id_tail}}"}
+  inputs:
+    name: "{{prop:QueueName}}"
+    fifo_queue: "{{prop:FifoQueue}}"
+    visibility_timeout_seconds: "{{prop:VisibilityTimeout}}"
+    message_retention_seconds: "{{prop:MessageRetentionPeriod}}"
+    delay_seconds: "{{prop:DelaySeconds}}"
+    receive_wait_time_seconds: "{{prop:ReceiveMessageWaitTimeSeconds}}"
+    max_message_size: "{{prop:MaximumMessageSize}}"
+    kms_master_key_id: "{{prop:KmsMasterKeyId}}"
+    redrive_policy: "{{prop:RedrivePolicy}}"
+    tags: "{{tags}}"
+  gaps:
+    sqs_managed_sse_enabled: "{{prop:SqsManagedSseEnabled}}"
+  dependencies:
+    - {path: KmsMasterKeyId, kind: KMSKey, output: key_arn, input: kms_master_key_id}
+  imports:
+    - {to: "aws_sqs_queue.this[0]", id: "https://sqs.{{region}}.amazonaws.com/{{account}}/{{id_tail}}"}
+    - {to: "aws_sqs_queue_redrive_policy.this[0]", id: "https://sqs.{{region}}.amazonaws.com/{{account}}/{{id_tail}}", if_prop: RedrivePolicy}

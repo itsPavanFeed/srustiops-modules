@@ -1,0 +1,34 @@
+# Kind SrustiOpsAzureNetwork: SrustiOps workspace network (Azure).
+# Used by the provisioner's blueprints.
+kind: SrustiOpsAzureNetwork
+id: azure-srustiops-network
+title: SrustiOps workspace network (Azure)
+description: Resource group, VNet with subnets for AKS, PostgreSQL (delegated) and private endpoints, and the private DNS zones they resolve through.
+platform: true
+source: first-party/azure/srustiops-network
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/azurerm
+inputs:
+  - name: location
+    type: string
+    required: true
+  - name: name
+    type: string
+    required: true
+  - name: cidr
+    type: string
+    description: "A /16: AKS nodes and pods get the first /18; PostgreSQL and private endpoints a /24 each after it"
+  - name: tags
+    type: map(string)
+outputs:
+  - resource_group
+  - vnet_id
+  - vnet_cidr
+  - aks_subnet_id
+  - postgres_subnet_id
+  - endpoints_subnet_id
+  - postgres_dns_zone_id
+  - blob_dns_zone_id
+  - vault_dns_zone_id

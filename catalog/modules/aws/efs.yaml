@@ -1,0 +1,66 @@
+# Kind EFSFileSystem: contracts use `kind: EFSFileSystem`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: EFSFileSystem
+id: aws-efs
+title: AWS EFS file system
+description: Encrypted EFS file system with TLS-only access and backups; mount targets in the given subnets.
+source: terraform-aws-modules/efs/aws
+versions:
+  - 2.2.1
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    required: true
+    pattern: ^[a-zA-Z0-9 ._-]{1,128}$
+  - name: kms_key_arn
+    type: string
+    description: KMS key, usually a reference to a KMSKey output.
+  - name: performance_mode
+    type: string
+    allowed: [generalPurpose, maxIO]
+  - name: throughput_mode
+    type: string
+    allowed: [bursting, elastic, provisioned]
+  - name: mount_targets
+    type: json
+    description: 'Map of mount targets, {name: {subnet_id}}.'
+  - name: security_group_vpc_id
+    type: string
+    description: VPC for the mount targets' security group, usually a reference to a VPC output.
+  - name: tags
+    type: map(string)
+    description: Tags.
+enforced:
+  encrypted: true
+  deny_nonsecure_transport: true
+  create_backup_policy: true
+  enable_backup_policy: true
+outputs:
+  - arn
+  - id
+  - dns_name
+adopt:
+  resource: aws_efs_file_system
+  match:
+    aws: ["elasticfilesystem:file-system"]
+  properties:
+    aws: {type: "AWS::EFS::FileSystem", id: "{{id_tail}}"}
+  inputs:
+    name: "{{propfind:FileSystemTags:Key=Name:Value}}"
+    kms_key_arn: "{{prop:KmsKeyId}}"
+    performance_mode: "{{prop:PerformanceMode}}"
+    throughput_mode: "{{prop:ThroughputMode}}"
+    tags: "{{tags}}"
+  # Mount targets, access points, its policy and security group stay as they
+  # are in AWS.
+  gaps:
+    encrypted: "{{prop:Encrypted}}"
+    create_security_group: false
+    attach_policy: false
+    create_backup_policy: false
+  dependencies:
+    - {path: KmsKeyId, kind: KMSKey, output: key_arn, input: kms_key_arn}
+  imports:
+    - {to: "aws_efs_file_system.this[0]", id: "{{id_tail}}"}

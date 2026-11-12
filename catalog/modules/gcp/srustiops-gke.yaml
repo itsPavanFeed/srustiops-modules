@@ -1,0 +1,56 @@
+# Kind SrustiOpsGKECluster: SrustiOps workspace cluster (GKE).
+# Used by the provisioner's blueprints.
+kind: SrustiOpsGKECluster
+id: gcp-srustiops-gke
+title: SrustiOps workspace cluster (GKE)
+description: Regional GKE cluster with private nodes, Workload Identity, Dataplane V2 and one autoscaling node pool with a minimal service account.
+platform: true
+source: first-party/gcp/srustiops-gke
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/google
+inputs:
+  - name: project
+    type: string
+    required: true
+  - name: region
+    type: string
+    required: true
+  - name: name
+    type: string
+    required: true
+  - name: network
+    type: string
+    required: true
+  - name: subnetwork
+    type: string
+    required: true
+  - name: pods_range
+    type: string
+    required: true
+  - name: services_range
+    type: string
+    required: true
+  - name: master_cidr
+    type: string
+  - name: master_authorized_cidrs
+    type: list(string)
+    description: "Who may reach the control plane besides Google (the provisioner's runners need it to install the chart)"
+  - name: kubernetes_version
+    type: string
+  - name: release_channel
+    type: string
+  - name: machine_type
+    type: string
+  - name: nodes_min
+    type: number
+  - name: nodes_max
+    type: number
+  - name: labels
+    type: map(string)
+outputs:
+  - cluster_name
+  - location
+  - endpoint
+  - workload_pool

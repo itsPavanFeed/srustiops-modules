@@ -1,0 +1,46 @@
+# Kind IAMPolicy: contracts use `kind: IAMPolicy`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: IAMPolicy
+id: aws-iam-policy
+title: AWS IAM policy
+description: Customer-managed IAM policy (attach it with an IAMRole's policies).
+source: terraform-aws-modules/iam/aws//modules/iam-policy
+versions:
+  - 6.8.2
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    required: true
+    pattern: ^[a-zA-Z0-9+=,.@_-]{1,128}$
+  - name: path
+    type: string
+    pattern: ^/([a-zA-Z0-9+=,.@_-]+/)*$
+  - name: description
+    type: string
+  - name: policy
+    type: string
+    required: true
+    description: Policy document (JSON).
+  - name: tags
+    type: map(string)
+    description: Tags.
+outputs:
+  - arn
+  - id
+  - name
+adopt:
+  resource: aws_iam_policy
+  match:
+    aws: ["iam:policy"]
+  properties:
+    aws: {type: "AWS::IAM::ManagedPolicy", id: "{{id}}"}
+  inputs:
+    name: "{{prop:ManagedPolicyName}}"
+    path: "{{prop:Path}}"
+    description: "{{prop:Description}}"
+    policy: "{{propjson:PolicyDocument}}"
+    tags: "{{tags}}"
+  imports:
+    - {to: "aws_iam_policy.policy[0]", id: "{{id}}"}

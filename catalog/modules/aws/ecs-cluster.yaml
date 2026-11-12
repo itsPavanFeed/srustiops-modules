@@ -1,0 +1,43 @@
+# Kind ECSCluster: contracts use `kind: ECSCluster`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: ECSCluster
+id: aws-ecs-cluster
+title: AWS ECS cluster
+description: ECS cluster with Container Insights and a CloudWatch log group for exec sessions.
+source: terraform-aws-modules/ecs/aws
+versions:
+  - 7.6.1
+providers:
+  - hashicorp/aws
+inputs:
+  - name: cluster_name
+    type: string
+    required: true
+    pattern: ^[a-zA-Z0-9_-]{1,255}$
+  - name: cloudwatch_log_group_retention_in_days
+    type: number
+    default: 30
+  - name: cloudwatch_log_group_kms_key_id
+    type: string
+    description: Usually a reference to a KMSKey output.
+  - name: tags
+    type: map(string)
+    description: Tags.
+outputs:
+  - cluster_arn
+  - cluster_id
+  - cluster_name
+adopt:
+  resource: aws_ecs_cluster
+  match:
+    aws: ["ecs:cluster"]
+  properties:
+    aws: {type: "AWS::ECS::Cluster", id: "{{id_tail}}"}
+  inputs:
+    cluster_name: "{{prop:ClusterName}}"
+    tags: "{{tags}}"
+  # Its log group and capacity providers stay as they are in AWS.
+  gaps:
+    create_cloudwatch_log_group: false
+  imports:
+    - {to: "module.cluster.aws_ecs_cluster.this[0]", id: "{{id_tail}}"}

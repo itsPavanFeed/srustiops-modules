@@ -1,0 +1,31 @@
+# Kind ElasticIP: contracts use `kind: ElasticIP`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: ElasticIP
+id: aws-elastic-ip
+title: AWS Elastic IP
+description: One Elastic IP address in a VPC (first-party module).
+source: first-party/aws/elastic-ip
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    description: Name tag.
+    pattern: ^[a-zA-Z0-9 ._-]{1,255}$
+  - name: tags
+    type: map(string)
+    description: Tags.
+outputs:
+  - allocation_id
+  - public_ip
+  - arn
+adopt:
+  resource: aws_eip
+  match:
+    aws: ["ec2:elastic-ip"]
+  inputs:
+    tags: "{{tags}}"
+  imports:
+    - {to: "aws_eip.this", id: "{{id_tail}}"}

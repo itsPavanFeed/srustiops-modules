@@ -1,0 +1,40 @@
+# Kind RouteTable: contracts use `kind: RouteTable`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: RouteTable
+id: aws-route-table
+title: AWS route table
+description: One route table in a VPC (first-party module); its routes and subnet associations stay as they are.
+source: first-party/aws/route-table
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/aws
+inputs:
+  - name: name
+    type: string
+    description: Name tag.
+    pattern: ^[a-zA-Z0-9 ._-]{1,255}$
+  - name: vpc_id
+    type: string
+    required: true
+    description: Usually a reference to a VPC output.
+  - name: tags
+    type: map(string)
+    description: Tags.
+outputs:
+  - id
+  - arn
+adopt:
+  resource: aws_route_table
+  match:
+    aws: ["ec2:route-table"]
+  properties:
+    aws: {type: "AWS::EC2::RouteTable", id: "{{id_tail}}"}
+  inputs:
+    name: "{{propfind:Tags:Key=Name:Value}}"
+    vpc_id: "{{prop:VpcId}}"
+    tags: "{{tags}}"
+  dependencies:
+    - {path: VpcId, kind: VPC, output: vpc_id, input: vpc_id}
+  imports:
+    - {to: "aws_route_table.this", id: "{{id_tail}}"}

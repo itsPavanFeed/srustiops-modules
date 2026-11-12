@@ -9,18 +9,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { path: cloud-pravaha-modules }
+        with: { path: srustiops-modules }
       - uses: actions/checkout@v4
-        with: { repository: itsPavanFeed/cloud-pravaha-backend, path: cloud-pravaha-backend }
+        with: { repository: itsPavanFeed/srustiops-backend, path: srustiops-backend }
       - uses: actions/setup-go@v5
-        with: { go-version-file: cloud-pravaha-backend/go.mod, cache-dependency-path: cloud-pravaha-backend/go.sum }
+        with: { go-version-file: srustiops-backend/go.mod, cache-dependency-path: srustiops-backend/go.sum }
       - name: Validate catalog and check every pin on registry.opentofu.org
-        working-directory: cloud-pravaha-backend
-        run: go run ./cmd/pravaha catalog verify -dir ../cloud-pravaha-modules/catalog -online
-      - name: Reject HCL in this repository (public modules only)
-        working-directory: cloud-pravaha-modules
+        working-directory: srustiops-backend
+        run: go run ./cmd/srustiops catalog verify -dir ../srustiops-modules/catalog -online
+      - name: Reject HCL outside first-party modules (everything else is a pinned public module)
+        working-directory: srustiops-modules
         run: |
-          if git ls-files | grep -E '\.(tf|tofu|tf\.json|tofu\.json|hcl)$'; then
-            echo "This repository must not contain module code; reference public registry modules in catalog/ instead." >&2
+          if git ls-files | grep -E '\.(tf|tofu|tf\.json|tofu\.json|hcl)$' | grep -v '^catalog/first-party/'; then
+            echo "Module code belongs only under catalog/first-party/; reference public registry modules in catalog/ instead." >&2
             exit 1
           fi
+      - uses: opentofu/setup-opentofu@v1
+        with: { tofu_wrapper: false }
+      - name: Validate first-party modules
+        working-directory: srustiops-modules/catalog/first-party
+        run: |
+          for d in */*/*/; do
+            echo "== $d"
+            (cd "$d" && tofu init -backend=false -input=false >/dev/null && tofu validate -no-color) || exit 1
+          done

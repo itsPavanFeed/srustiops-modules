@@ -1,0 +1,59 @@
+# Kind ECRRepository: contracts use `kind: ECRRepository`.
+# Inputs list what a contract may set (with kind defaults); enforced is the locked security baseline.
+kind: ECRRepository
+id: aws-ecr
+title: AWS ECR repository
+description: Private ECR repository with immutable tags and scan on push.
+source: terraform-aws-modules/ecr/aws
+versions:
+  - 3.2.1
+providers:
+  - hashicorp/aws
+inputs:
+  - name: repository_name
+    type: string
+    required: true
+    description: Repository name.
+    pattern: ^[a-z0-9]+([._/-][a-z0-9]+)*$
+  - name: repository_kms_key
+    type: string
+    description: KMS key ARN (with repository_encryption_type KMS), usually a reference to a KMSKey output.
+  - name: repository_encryption_type
+    type: string
+    allowed: [AES256, KMS]
+  - name: repository_lifecycle_policy
+    type: string
+    description: Lifecycle policy JSON.
+  - name: tags
+    type: map(string)
+    description: Tags.
+enforced:
+  repository_type: private
+  repository_image_tag_mutability: IMMUTABLE
+  repository_image_scan_on_push: true
+outputs:
+  - repository_name
+  - repository_arn
+  - repository_url
+adopt:
+  resource: aws_ecr_repository
+  match:
+    aws: ["ecr:repository"]
+  properties:
+    aws: {type: "AWS::ECR::Repository", id: "{{arn_path:repository/}}"}
+  inputs:
+    repository_name: "{{prop:RepositoryName}}"
+    repository_encryption_type: "{{prop:EncryptionConfiguration.EncryptionType}}"
+    repository_kms_key: "{{prop:EncryptionConfiguration.KmsKey}}"
+    tags: "{{tags}}"
+  # Its policy and lifecycle policy stay as they are in AWS.
+  gaps:
+    repository_image_tag_mutability: "{{prop:ImageTagMutability}}"
+    repository_image_scan_on_push: "{{prop:ImageScanningConfiguration.ScanOnPush}}"
+    create_repository_policy: false
+    attach_repository_policy: false
+    create_lifecycle_policy: false
+  dependencies:
+    - {path: EncryptionConfiguration.KmsKey, kind: KMSKey, output: key_arn, input: repository_kms_key}
+  imports:
+    - {to: "aws_ecr_repository.this[0]", id: "{{arn_path:repository/}}"}

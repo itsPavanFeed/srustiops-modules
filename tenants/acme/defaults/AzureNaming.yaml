@@ -1,5 +1,5 @@
 # Acme's defaults for the AzureNaming kind. Contracts only set what differs.
-apiVersion: pravaha/v1
+apiVersion: srustiops/v1
 kind: Defaults
 target: AzureNaming
 spec:

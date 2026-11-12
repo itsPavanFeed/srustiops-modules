@@ -1,0 +1,65 @@
+# Kind SrustiOpsEKSInstall: the tenant Helm chart on an EKS cluster.
+kind: SrustiOpsEKSInstall
+id: aws-srustiops-eks-install
+title: SrustiOps tenant on EKS (Helm)
+description: Installs the srustiops-tenant chart with a one-time install token, so bootstrap makes every key in the cluster; the database URL comes from the RDS-managed secret.
+platform: true
+source: first-party/aws/srustiops-eks-install
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/aws
+  - hashicorp/kubernetes
+  - hashicorp/helm
+inputs:
+  - name: tenant
+    type: string
+    required: true
+  - name: cluster_name
+    type: string
+    required: true
+  - name: chart_repository
+    type: string
+  - name: chart_version
+    type: string
+    required: true
+  - name: image_repo
+    type: string
+  - name: image_tag
+    type: string
+    required: true
+  - name: gateway_url
+    type: string
+    required: true
+  - name: central_url
+    type: string
+    required: true
+  - name: gateway_ca
+    type: string
+  - name: install_token
+    type: string
+    required: true
+    description: One-time install token (works once, expires in an hour); the provisioner sets it.
+    one_time_token: true
+  - name: database_endpoint
+    type: string
+    required: true
+  - name: database_password_secret_arn
+    type: string
+    required: true
+  - name: bucket
+    type: string
+    required: true
+  - name: tenant_role_arn
+    type: string
+    required: true
+  - name: runner_role_arn
+    type: string
+    required: true
+  - name: replicas
+    type: number
+    min: 1
+    max: 5
+outputs:
+  - release
+  - namespace

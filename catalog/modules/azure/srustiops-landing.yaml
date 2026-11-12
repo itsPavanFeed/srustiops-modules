@@ -1,0 +1,54 @@
+# Kind SrustiOpsAzureLanding: SrustiOps tenant landing (Azure).
+# Used by the provisioner's blueprints.
+kind: SrustiOpsAzureLanding
+id: azure-srustiops-landing
+title: SrustiOps tenant landing (Azure)
+description: State storage account (no shared keys, private endpoint), PostgreSQL flexible server, a Key Vault with the database password, and the Workload ID identities of the tenant plane and runners. Data resources are protected from destroy.
+platform: true
+source: first-party/azure/srustiops-landing
+versions:
+  - 1.0.0
+providers:
+  - hashicorp/azurerm
+  - hashicorp/random
+inputs:
+  - name: location
+    type: string
+    required: true
+  - name: name
+    type: string
+    required: true
+  - name: resource_group
+    type: string
+    required: true
+  - name: postgres_subnet_id
+    type: string
+    required: true
+  - name: endpoints_subnet_id
+    type: string
+    required: true
+  - name: postgres_dns_zone_id
+    type: string
+    required: true
+  - name: blob_dns_zone_id
+    type: string
+    required: true
+  - name: aks_oidc_issuer
+    type: string
+    required: true
+  - name: db_sku
+    type: string
+  - name: db_high_availability
+    type: bool
+  - name: namespace
+    type: string
+  - name: release
+    type: string
+  - name: tags
+    type: map(string)
+outputs:
+  - tenant_client_id
+  - runner_client_id
+  - storage_account
+  - database_host
+  - key_vault_id
